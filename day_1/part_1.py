@@ -1,4 +1,3 @@
-
 def read_lines(path):
     with open(path) as file:
         return [line.rstrip() for line in file]
