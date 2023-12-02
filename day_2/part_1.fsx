@@ -41,8 +41,8 @@ let getLineScore (line: Token list) : int =
             
     if isPossible line[1..] then gameId else 0
 
-let result =
-    File.ReadAllLines(__SOURCE_DIRECTORY__ + "/input")
-    |> Array.filter (String.IsNullOrWhiteSpace >> not)
-    |> Array.map (parseLine >> getLineScore)
-    |> Array.sum
+File.ReadAllLines(__SOURCE_DIRECTORY__ + "/input")
+|> Array.filter (String.IsNullOrWhiteSpace >> not)
+|> Array.map (parseLine >> getLineScore)
+|> Array.sum
+|> printfn "%A"
