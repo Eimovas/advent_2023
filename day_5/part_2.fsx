@@ -33,59 +33,62 @@ let parseSeeds (line: string) =
             | _ -> failwith "Invalid format of seeds - expecting pairs all over" 
         loop original List.empty
     
-    let sortedPairs =
-        pairs
-        |> List.sortBy fst
-        |> List.sortByDescending snd 
-    
-    let concatenated =
-        let rec loop list (previousStart, previousEnd) acc =
-            match list with
-            | [] -> (previousStart, previousEnd)::acc
-            | (start', end')::tail ->
-                // if current start is in range of previous range, check if current end is > than previous end
-                if start' >= previousStart && start' <= previousEnd then
-                    if end' <= previousEnd then
-                        loop tail (previousStart,previousEnd) acc // completely ignore this iteration
-                    else
-                        loop tail (previousStart, end') acc // change the end to current one
-                else
-                    loop tail (start', end') ((previousStart,previousEnd)::acc) 
-            
-        loop sortedPairs[1..] sortedPairs[0] List.empty
-    
-    let result = ResizeArray<_>()
-    for start', end' in concatenated do
-        printfn $"Processing {start'} to {end'} - range of {end' - start'}"
-        result.Add([| for i in start' .. end' -> i |])
-        printfn "Added range"
-
+    pairs 
+    // let sortedPairs =
+    //     pairs
+    //     |> List.sortBy fst
+    //     |> List.sortByDescending snd 
     //
-    // let result = ResizeArray()
-    // for i in fst concatenated[0] .. snd concatenated[0] do
-    //     result.Add(i)
-    //     
-    // result 
-    
-    // concatenated
-    // |> List.toArray
-    // |> Array.Parallel.collect (fun (start',end') -> [| for i in start'..end' -> i |])
+    // let ranges =
+    //     let rec loop list (previousStart, previousEnd) acc =
+    //         match list with
+    //         | [] -> (previousStart, previousEnd)::acc
+    //         | (start', end')::tail ->
+    //             // if current start is in range of previous range, check if current end is > than previous end
+    //             if start' >= previousStart && start' <= previousEnd then
+    //                 if end' <= previousEnd then
+    //                     loop tail (previousStart,previousEnd) acc // completely ignore this iteration
+    //                 else
+    //                     loop tail (previousStart, end') acc // change the end to current one
+    //             else
+    //                 loop tail (start', end') ((previousStart,previousEnd)::acc) 
+    //         
+    //     loop sortedPairs[1..] sortedPairs[0] List.empty
+    // ranges 
 
-// let getResultPart2() =
-//     let input = loadInput("input")
-//     let seeds = parseSeeds input[0]
-//     let linkedList =
-//         input[1..]
-//         |> Array.map (fun str -> str.Split(Environment.NewLine))
-//         |> Array.map parseMapping
-//         |> Array.fold (fun (acc: LinkedList<_>) (_,_,ranges) -> acc.AddLast(ranges) |> ignore ; acc) (LinkedList<_>())
-//
-//     traverse seeds linkedList
-//     |> List.min
+/// traverse the seeds and the linked list to find the destination     
+let traverse seedRanges (linkedList: LinkedList<_>) =
+    let rec loop seed (node: LinkedListNode<_>) =
+        if isNull node then seed 
+        else
+            let target = convertToTarget seed (node.Value |> Array.toList)
+            loop target node.Next
+        
+    seedRanges
+    |> List.fold (fun (acc: int64) (start',end') ->
+        printfn $"Processing %A{(start',end')}"
+        
+        let mutable min = acc
+        for i in start'..end' do 
+            let result = (loop i linkedList.First)
+            if result < min then
+                min <- result
+        min) Int64.MaxValue
 
-// TODO: FINISHED HERE! Seem to be running out of memory :(
-let input = loadInput("input")
-let seeds = parseSeeds input[0]
-printfn "%A" seeds
+let getResultPart2() =
+    let input = loadInput("input")
+    let seedRanges = parseSeeds input[0]
+    let linkedList =
+        input[1..]
+        |> Array.map (fun str -> str.Split(Environment.NewLine))
+        |> Array.map parseMapping
+        |> Array.fold (fun (acc: LinkedList<_>) (_,_,ranges) -> acc.AddLast(ranges) |> ignore ; acc) (LinkedList<_>())
 
-// getResultPart2()
+    traverse seedRanges linkedList
+
+// let input = loadInput("input")
+// let seeds = parseSeeds input[0]
+// printfn "%A" seeds
+
+// TODO: not working :(
+getResultPart2() |> printfn "Result: %A"
