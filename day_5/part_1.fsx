@@ -1,18 +1,6 @@
-open System 
-
-Int64.Parse("3171885613")
-
-// seeds: 79 14 55 13
-(*
-    dest: 50, 51
-    source: 98, 99
-    (nothing matches)
-    
-    dest: 52, 53, 54, 55, 56...
-    source: 50, 51, 52, 53, 54...
-    
-    55 -> 57, 79 -> 81, 
-*)
+open System
+open System.Collections.Generic
+open System.IO
 
 let parseSeeds (line: string) =
     line.Split([|':'; ' '|], StringSplitOptions.RemoveEmptyEntries)[1..]
@@ -31,4 +19,44 @@ let parseMapping (lines: string[]) =
     
     sourceTitle, destinationTitle, ranges
 
-// TODO: FINISHED HERE! Fixed the parsing
+/// convert source into target by considering all target ranges
+let convertToTarget (from: int64) (ranges: (int64 * int64 * int64) list) =
+    let rec loop list =
+        match list with
+        | [] -> from 
+        | (destination,source,length)::tail ->
+            let adjustedSource = source + length
+            if from >= source && from <= adjustedSource then
+                // number is within range, we find the appropriate coordinates for it
+                destination - source + from
+            else
+                loop tail 
+    
+    loop ranges
+
+/// traverse the seeds and the linked list to find the destination     
+let traverse seeds (linkedList: LinkedList<_>) =
+    let rec loop seed (node: LinkedListNode<_>) =
+        if isNull node then seed 
+        else
+            let target = convertToTarget seed (node.Value |> Array.toList)
+            loop target node.Next
+        
+    seeds
+    |> Set.fold (fun acc seed -> (loop seed linkedList.First)::acc) List.empty
+    
+let loadInput (fileName: string) =
+    File.ReadAllText(__SOURCE_DIRECTORY__ + $"/{fileName}")
+    |> fun str -> str.Split(Environment.NewLine + Environment.NewLine)
+
+let getResultPart1() =
+    let input = loadInput("input")
+    let seeds = parseSeeds input[0]
+    let linkedList =
+        input[1..]
+        |> Array.map (fun str -> str.Split(Environment.NewLine))
+        |> Array.map parseMapping
+        |> Array.fold (fun (acc: LinkedList<_>) (_,_,ranges) -> acc.AddLast(ranges) |> ignore ; acc) (LinkedList<_>())
+
+    traverse seeds linkedList
+    |> List.min
