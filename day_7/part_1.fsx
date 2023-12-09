@@ -1,9 +1,26 @@
 open System
 open System.IO
 
-let parse (line: string) =
+// encoding to make it easy to sort 
+let rankingEncoding = Map [
+    'A', 'a'
+    'K', 'b'
+    'Q', 'c'
+    'J', 'd'
+    'T', 'e'
+    '9', 'f'
+    '8', 'g'
+    '7', 'h'
+    '6', 'i'
+    '5', 'j'
+    '4', 'k'
+    '3', 'l'
+    '2', 'm'
+]
+
+let parseAndEncode (line: string) =
     let split = line.Split([|' '|], StringSplitOptions.RemoveEmptyEntries)
-    split[0], Int32.Parse(split[1])
+    split[0].ToCharArray() |> Array.map (fun char -> rankingEncoding[char]) |> fun arr -> String.Join("", arr), Int32.Parse(split[1])
 
 let isFiveOfAKind (hand: string) =
     hand.ToCharArray() |> Set.ofArray |> Set.count = 1
@@ -42,7 +59,7 @@ let isThreeOfAKind (hand: string) =
         values[0] = 3 && values[1] = 1 && values[2] = 1
 
 let isTwoOfAKind (hand: string) =
-    hand.ToCharArray() |> Set.ofArray |> Set.count = 2
+    hand.ToCharArray() |> Set.ofArray |> Set.count = 4
 
 let isFullHouse (hand: string) =
     let map =
@@ -87,33 +104,34 @@ let rules = [
     fun _ -> true // everything else
 ]
 
-let calculateScore rules (hands: (string * int) list) =
+let calculateScore rules (startingHands: (string * int) list) =
     // find all highest hands, rank them, then lower, rank, and etc
-    let rec evalRule eval hands result =
+    let rec evalRule rule hands result =
         match hands with
         | [] -> result
         | head::tail ->
-            if eval (fst head) then evalRule eval tail (head::result)
-            else evalRule eval tail result
+            if rule (fst head) then evalRule rule tail (head::result)
+            else evalRule rule tail result
     
-    // TODO: FINISHED HERE! I need to make sure I remove hands I already ranked.
-    // TODO: check if I use the correct rank - best card is rank max?
-    let rec rankAndScore rules ranks result =
+    let rec rank rules hands ranks result =
         match rules with
-        | [] -> result
+        | [] -> result |> List.sortByDescending (fun (x,_,_) -> x) 
         | rule::tail ->
-            let currentScore, remainingRanks =
-                evalRule rule hands List.empty
+            let scores = evalRule rule hands List.empty
+            let remainingHands = List.except scores hands
+            let ranked =
+                scores
                 |> List.sortBy fst
-                |> List.fold (fun (score,rank) (game,winnings) ->
-                    score + (rank * winnings), rank - 1) (result,ranks)
+                |> List.mapi (fun i (game,winnings) -> ranks - i, game, winnings)
             
-            rankAndScore tail remainingRanks currentScore
+            rank tail remainingHands (ranks - scores.Length) (ranked @ result)
     
-    rankAndScore rules hands.Length 0
+    let ranked = rank rules startingHands startingHands.Length List.empty
+    ranked
+    |> List.fold (fun result (rank,_,score) -> result + (int64 rank * int64 score)) 0L
 
-File.ReadAllLines(__SOURCE_DIRECTORY__ + "/test_input")
-|> Array.map parse
+File.ReadAllLines(__SOURCE_DIRECTORY__ + "/input")
+|> Array.map parseAndEncode
 |> Array.toList
 |> calculateScore rules
 |> printfn "%A"
