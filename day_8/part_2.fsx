@@ -60,14 +60,27 @@ File.ReadAllLines(__SOURCE_DIRECTORY__ + "/input")
     The above has been running a little longer than i'd like.
     I think if I could find the first index Z of each starting number, I could find LCM between them and I'd get the answer.
 *)
+let getLcm list =
+    let max = list |> List.max
+    
+    let rec loop index =
+        let next = max * index
+        if list |> List.forall (fun x -> next % x = 0L) then next
+        else loop (index + 1L)
+        
+    loop 1L
+    
 let denominators = [
-    16343
-    11911
-    20221
-    21883
-    13019
-    19667
+    16343L
+    11911L
+    20221L
+    21883L
+    13019L
+    19667L
 ]
-// used: https://www.calculatorsoup.com/calculators/math/lcm.php
+
+getLcm denominators
+
+// used to test: https://www.calculatorsoup.com/calculators/math/lcm.php
 // got answer: 13524038372771
 
